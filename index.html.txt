@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Energy Consumption Monitor (C Mini-Project)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1>Smart Energy Consumption Monitor</h1>
+      <p>C Programming Mini-Project Simulator — Tracks up to 10 rooms/appliances</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Quick Test Cases Bar -->
+    <section class="card test-bar">
+      <span><strong>Quick Load Test Cases:</strong></span>
+      <button type="button" onclick="loadPreset('sample')">Sample Home (Above Limit)</button>
+      <button type="button" onclick="loadPreset('zero')">TC-01: Zero Usage</button>
+      <button type="button" onclick="loadPreset('exact')">TC-02: Exactly at Limit</button>
+      <button type="button" onclick="clearAll()">Reset All</button>
+    </section>
+
+    <div class="grid-two">
+      <!-- Left Column: Inputs -->
+      <section class="card">
+        <h2>1. Add Room / Appliance (<span id="countBadge">0</span> / 10)</h2>
+        <div id="errorBox" class="error-box hidden"></div>
+
+        <div class="form-group">
+          <label for="labelInput">Room or Appliance Label</label>
+          <input type="text" id="labelInput" placeholder="e.g., Living Room AC" maxlength="50" />
+        </div>
+
+        <div class="form-group">
+          <label for="kwhInput">Consumption (in kWh — must be 0 or greater)</label>
+          <input type="number" id="kwhInput" step="0.01" placeholder="e.g., 12.50" />
+        </div>
+
+        <button type="button" class="btn-primary" onclick="addAppliance()">+ Add to Monitor</button>
+
+        <hr />
+
+        <h2>2. Usage Limit &amp; Day 2 Comparison</h2>
+        <div class="form-group">
+          <label for="limitInput">Defined Total Consumption Limit (kWh)</label>
+          <input type="number" id="limitInput" step="0.01" value="20.00" onchange="updateLimit()" />
+        </div>
+
+        <div class="form-group">
+          <label for="day2Input">Optional: Simulated Day 2 Total Usage (kWh)</label>
+          <input type="number" id="day2Input" step="0.01" placeholder="Enter Day 2 kWh to compare" oninput="renderMonitor()" />
+        </div>
+        <div id="day2Result" class="comparison-box">Enter a Day 2 value above to compare two periods.</div>
+      </section>
+
+      <!-- Right Column: Summary & Status -->
+      <section class="card">
+        <h2>3. Consumption Summary</h2>
+
+        <div id="statusBanner" class="status-banner within">
+          STATUS: WITHIN LIMIT
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-label">Total Consumption</span>
+            <strong id="totalVal">0.00 kWh</strong>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Average / Appliance</span>
+            <strong id="avgVal">0.00 kWh</strong>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Defined Limit</span>
+            <strong id="limitVal">20.00 kWh</strong>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Highest Consumer</span>
+            <strong id="highestVal">None</strong>
+          </div>
+        </div>
+
+        <div class="table-header">
+          <h3>Monitored Rooms / Appliances</h3>
+          <div class="table-actions">
+            <button type="button" onclick="toggleSort()" id="sortBtn">Sort: Highest First</button>
+            <button type="button" class="btn-secondary" onclick="downloadReport()">Save energy_report.txt</button>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Room / Appliance Label</th>
+              <th>Usage (kWh)</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="applianceTableBody"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- Bottom Section: C Console Output Emulator -->
+    <section class="card">
+      <h2>4. Live C Console Output &amp; File Preview (energy_report.txt)</h2>
+      <pre id="consoleOutput" class="terminal"></pre>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

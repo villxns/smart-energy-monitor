@@ -1,0 +1,270 @@
+const MAX_ITEMS = 10;
+
+// Parallel arrays mirroring char labels[][50] and double usage[] in C
+let labels = [];
+let usage = [];
+let consumptionLimit = 20.0;
+let isSortedDescending = false;
+
+function showError(message) {
+  const errorBox = document.getElementById("errorBox");
+  errorBox.textContent = message;
+  errorBox.classList.remove("hidden");
+}
+
+function clearError() {
+  const errorBox = document.getElementById("errorBox");
+  errorBox.textContent = "";
+  errorBox.classList.add("hidden");
+}
+
+// Mirrors getValidatedCount() and getValidatedNonNegativeDouble() in C
+function addAppliance() {
+  clearError();
+  const labelField = document.getElementById("labelInput");
+  const kwhField = document.getElementById("kwhInput");
+
+  if (labels.length >= MAX_ITEMS) {
+    showError(`[Error] Count must be between 1 and ${MAX_ITEMS}. Maximum limit reached!`);
+    return;
+  }
+
+  let rawLabel = labelField.value.trim();
+  if (rawLabel === "") {
+    rawLabel = `Appliance_${labels.length + 1}`;
+  }
+
+  const rawKwh = kwhField.value.trim();
+  const parsedKwh = Number(rawKwh);
+
+  if (rawKwh === "" || Number.isNaN(parsedKwh)) {
+    showError("[Error] Invalid numeric input! Please enter a valid number in kWh.");
+    return;
+  }
+
+  if (parsedKwh < 0) {
+    showError("[Error] Negative reading rejected! Consumption value must be 0 or greater.");
+    return;
+  }
+
+  labels.push(rawLabel);
+  usage.push(parsedKwh);
+
+  labelField.value = "";
+  kwhField.value = "";
+  renderMonitor();
+}
+
+function removeAppliance(index) {
+  clearError();
+  labels.splice(index, 1);
+  usage.splice(index, 1);
+  renderMonitor();
+}
+
+function updateLimit() {
+  clearError();
+  const limitField = document.getElementById("limitInput");
+  const parsedLimit = Number(limitField.value);
+
+  if (limitField.value.trim() === "" || Number.isNaN(parsedLimit) || parsedLimit < 0) {
+    showError("[Error] Limit must be a non-negative number! Reverting to previous valid limit.");
+    limitField.value = consumptionLimit.toFixed(2);
+    return;
+  }
+
+  consumptionLimit = parsedLimit;
+  renderMonitor();
+}
+
+// Mirrors calculateTotal(const double usage[], int n)
+function calculateTotal(arr) {
+  let sum = 0.0;
+  for (let i = 0; i < arr.length; i++) {
+    sum += arr[i];
+  }
+  return sum;
+}
+
+// Mirrors calculateAverage(double total, int n)
+function calculateAverage(total, n) {
+  if (n <= 0) return 0.0;
+  return total / n;
+}
+
+// Mirrors findHighestConsumptionIndex(const double usage[], int n)
+function findHighestConsumptionIndex(arr) {
+  if (arr.length === 0) return -1;
+  let maxIndex = 0;
+  for (let i = 1; i < arr.length; i++) {
+    if (arr[i] > arr[maxIndex]) {
+      maxIndex = i;
+    }
+  }
+  return maxIndex;
+}
+
+function toggleSort() {
+  isSortedDescending = !isSortedDescending;
+  document.getElementById("sortBtn").textContent = isSortedDescending
+    ? "Sort: Original Order"
+    : "Sort: Highest First";
+  renderMonitor();
+}
+
+function buildReportText(total, avg, maxIdx) {
+  let lines = [];
+  lines.push("====================================================");
+  lines.push("             ENERGY CONSUMPTION SUMMARY             ");
+  lines.push("====================================================");
+  lines.push("No.   Room / Appliance          Usage (kWh)");
+  lines.push("----------------------------------------------------");
+
+  if (labels.length === 0) {
+    lines.push("No appliances added yet.");
+  } else {
+    for (let i = 0; i < labels.length; i++) {
+      const num = String(i + 1).padEnd(5, " ");
+      const name = labels[i].padEnd(25, " ");
+      const val = usage[i].toFixed(2).padStart(10, " ");
+      lines.push(`${num} ${name} ${val} kWh`);
+    }
+  }
+
+  lines.push("----------------------------------------------------");
+  lines.push(`Total Consumption   : ${total.toFixed(2)} kWh`);
+  lines.push(`Average Consumption : ${avg.toFixed(2)} kWh`);
+  lines.push(`Defined Usage Limit : ${consumptionLimit.toFixed(2)} kWh`);
+  if (maxIdx !== -1) {
+    lines.push(`Highest Consumer    : ${labels[maxIdx]} (${usage[maxIdx].toFixed(2)} kWh)`);
+  } else {
+    lines.push("Highest Consumer    : N/A");
+  }
+  lines.push("----------------------------------------------------");
+
+  if (total > consumptionLimit) {
+    const diff = (total - consumptionLimit).toFixed(2);
+    lines.push(`STATUS              : LIMIT EXCEEDED (by ${diff} kWh)`);
+  } else {
+    const rem = (consumptionLimit - total).toFixed(2);
+    lines.push(`STATUS              : WITHIN LIMIT (${rem} kWh remaining)`);
+  }
+  lines.push("====================================================");
+  return lines.join("\n");
+}
+
+function renderMonitor() {
+  const n = labels.length;
+  const total = calculateTotal(usage);
+  const avg = calculateAverage(total, n);
+  const maxIdx = findHighestConsumptionIndex(usage);
+
+  document.getElementById("countBadge").textContent = n;
+  document.getElementById("totalVal").textContent = `${total.toFixed(2)} kWh`;
+  document.getElementById("avgVal").textContent = `${avg.toFixed(2)} kWh`;
+  document.getElementById("limitVal").textContent = `${consumptionLimit.toFixed(2)} kWh`;
+  document.getElementById("highestVal").textContent =
+    maxIdx !== -1 ? `${labels[maxIdx]} (${usage[maxIdx].toFixed(2)} kWh)` : "None";
+
+  // Limit Check Conditional Statement
+  const banner = document.getElementById("statusBanner");
+  if (total > consumptionLimit) {
+    banner.className = "status-banner exceeded";
+    banner.textContent = `LIMIT EXCEEDED (Total exceeds limit by ${(total - consumptionLimit).toFixed(2)} kWh)`;
+  } else {
+    banner.className = "status-banner within";
+    banner.textContent = `WITHIN LIMIT (${(consumptionLimit - total).toFixed(2)} kWh remaining)`;
+  }
+
+  // Prepare list (with optional Bubble Sort copy)
+  let items = labels.map((lbl, idx) => ({ index: idx, label: lbl, kwh: usage[idx] }));
+  if (isSortedDescending) {
+    for (let i = 0; i < items.length - 1; i++) {
+      for (let j = 0; j < items.length - i - 1; j++) {
+        if (items[j].kwh < items[j + 1].kwh) {
+          const temp = items[j];
+          items[j] = items[j + 1];
+          items[j + 1] = temp;
+        }
+      }
+    }
+  }
+
+  const tbody = document.getElementById("applianceTableBody");
+  tbody.innerHTML = "";
+  items.forEach((item, displayIdx) => {
+    const tr = document.createElement("tr");
+    const isHighest = item.index === maxIdx && item.kwh > 0;
+    tr.innerHTML = `
+      <td>${displayIdx + 1}</td>
+      <td>${item.label} ${isHighest ? "<strong>(Highest)</strong>" : ""}</td>
+      <td>${item.kwh.toFixed(2)} kWh</td>
+      <td><button type="button" onclick="removeAppliance(${item.index})">Remove</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Optional Enhancement 4: Day 1 vs Day 2 Comparison
+  const day2Raw = document.getElementById("day2Input").value.trim();
+  const day2Box = document.getElementById("day2Result");
+  if (day2Raw !== "" && !Number.isNaN(Number(day2Raw)) && Number(day2Raw) >= 0) {
+    const day2Total = Number(day2Raw);
+    const diff = day2Total - total;
+    if (diff > 0) {
+      day2Box.textContent = `Day 2 Comparison: Usage INCREASED by ${diff.toFixed(2)} kWh on Day 2.`;
+    } else if (diff < 0) {
+      day2Box.textContent = `Day 2 Comparison: Usage DECREASED by ${Math.abs(diff).toFixed(2)} kWh on Day 2.`;
+    } else {
+      day2Box.textContent = "Day 2 Comparison: Usage remained UNCHANGED across both days.";
+    }
+  } else {
+    day2Box.textContent = "Enter a non-negative Day 2 value above to compare two periods.";
+  }
+
+  // Update C Console Output Preview
+  document.getElementById("consoleOutput").textContent = buildReportText(total, avg, maxIdx);
+}
+
+// Optional Enhancement 3: Save report to energy_report.txt
+function downloadReport() {
+  const total = calculateTotal(usage);
+  const avg = calculateAverage(total, labels.length);
+  const maxIdx = findHighestConsumptionIndex(usage);
+  const text = buildReportText(total, avg, maxIdx);
+
+  const blob = new Blob([text], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "energy_report.txt";
+  link.click();
+}
+
+// Preset Test Cases for Viva / Demonstration
+function loadPreset(type) {
+  clearError();
+  if (type === "sample") {
+    labels = ["Living Room AC", "Kitchen Refrigerator", "Water Heater (Geyser)", "Study Room Lights"];
+    usage = [12.5, 4.2, 6.8, 1.5];
+    consumptionLimit = 20.0;
+  } else if (type === "zero") {
+    labels = ["Bedroom Fan", "Study Lamp", "TV Unit"];
+    usage = [0.0, 0.0, 0.0];
+    consumptionLimit = 10.0;
+  } else if (type === "exact") {
+    labels = ["Air Cooler", "Washing Machine", "LED Lights"];
+    usage = [5.0, 3.0, 2.0];
+    consumptionLimit = 10.0;
+  }
+  document.getElementById("limitInput").value = consumptionLimit.toFixed(2);
+  renderMonitor();
+}
+
+function clearAll() {
+  clearError();
+  labels = [];
+  usage = [];
+  renderMonitor();
+}
+
+// Load the default sample on startup
+loadPreset("sample");
